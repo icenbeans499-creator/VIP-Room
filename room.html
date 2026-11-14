@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VIP Room · Ice N Beans</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap" media="print" onload="this.media=\'all\'">
+<style>
+:root{--ink:#171412;--ink2:#221e1a;--line:#3a332b;--beige:#d8c3a0;--cream:#f1e8d6;--mute:#9b8f7c;--busy:#d9644a;color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+body{font-family:Tajawal,Tahoma,sans-serif;background:var(--ink);color:var(--cream);padding:16px 16px 120px;max-width:560px;margin:auto;line-height:1.6;padding-top:calc(16px + env(safe-area-inset-top,0px))}
+h1,h2,.disp{font-family:'Reem Kufi',Tajawal,sans-serif;font-weight:700}
+h1{color:var(--beige);font-size:26px}
+header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+header span{color:var(--mute)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:12px;padding:10px 16px;font-weight:700;background:var(--line)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--beige);outline-offset:2px}
+.primary{background:var(--beige);color:var(--ink)}
+.card{background:var(--ink2);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px}
+#room{text-align:center}
+#room small{color:var(--mute)}
+.big{font-family:'Reem Kufi';font-size:56px;line-height:1.1;direction:ltr;font-variant-numeric:tabular-nums;color:var(--cream)}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px}
+.tabs button{white-space:nowrap;background:transparent;border:1px solid var(--line);color:var(--beige)}
+.tabs button.on{background:var(--beige);color:var(--ink);border-color:var(--beige)}
+.it{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.it:first-child{border-top:0}
+.it b{display:block}.it small{color:var(--beige)}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:38px;height:38px;padding:0;font-size:20px}
+.qty span{min-width:18px;text-align:center;font-family:'Reem Kufi';font-size:18px}
+textarea{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;resize:none}
+#bar{position:fixed;left:0;right:0;bottom:0;background:var(--ink2);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:none;justify-content:space-between;align-items:center;gap:12px;max-width:560px;margin:auto}
+#bar .tot{font-family:'Reem Kufi';font-size:22px;color:var(--beige)}
+#bar button{flex:1;max-width:60%}
+#st{text-align:center;border-color:var(--beige);display:none}
+#st a{color:var(--beige)}
+</style>
+</head>
+<body>
+<header><h1>Ice N Beans</h1><span>VIP Room</span></header>
+
+<section class="card" id="room" hidden></section>
+<section class="card" id="st"></section>
+
+<section class="card">
+  <h2 style="color:var(--beige);margin-bottom:10px">المنيو</h2>
+  <div class="tabs" id="tabs"></div>
+  <div id="items"></div>
+</section>
+<section class="card">
+  <label for="note" style="color:var(--mute);font-size:14px">ملاحظات على الطلب (اختياري)</label>
+  <textarea id="note" rows="2"></textarea>
+</section>
+
+<div id="bar"><div class="tot" id="tot"></div><button class="primary" id="send">ابعت الطلب</button></div>
+
+<script>
+/* ===== الإعدادات ===== */
+var DB=''; /* بيتوصّل تلقائي بمشروع vip-room-cc751 */
+(function(){var P='vip-room-cc751-default-rtdb',C=['https://'+P+'.europe-west1.firebasedatabase.app','https://'+P+'.firebaseio.com','https://'+P+'.asia-southeast1.firebasedatabase.app'];
+(function f(i){if(i>=C.length)return;fetch(C[i]+'/.json?shallow=true').then(function(r){if(r.ok){DB=C[i];renderRoom();pollRoom();}else f(i+1)},function(){f(i+1)})})(0)})();
+var WA='';  /* رقم واتساب الكاشير بالصيغة الدولية من غير +، مثال 201012345678 */
+var MENU=[  /* غيّر الأصناف والأسعار بالمنيو الحقيقي */
+ {c:'تجريبي',i:[{n:'صنف تجريبي 1 (غيّره)',p:10},{n:'صنف تجريبي 2 (غيّره)',p:20},{n:'صنف تجريبي 3 (غيّره)',p:30}]}
+];
+/* ===== الكود ===== */
+var $=function(s){return document.querySelector(s)};
+var p2=function(n){return String(n).padStart(2,'0')};
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmt(ms){var s=Math.max(0,Math.floor(ms/1000));return p2(Math.floor(s/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60)}
+var cart={},cat=0,room={on:false},myKey=null,lastStatus='';
+
+function renderRoom(){
+  var el=$('#room');
+  if(!DB){el.hidden=true;return}
+  el.hidden=false;
+  if(!room.on){el.innerHTML='<small>الروم</small><div class="disp" style="font-size:26px;color:var(--beige);margin:6px 0">فاضية دلوقتي</div>';return}
+  el.innerHTML='<small>وقتك في الروم</small><div class="big" id="rt"></div><small id="rrem"></small>';tickRoom();
+}
+function tickRoom(){
+  if(!room.on||!$('#rt'))return;
+  var ms=Date.now()-room.start;$('#rt').textContent=fmt(ms);
+  if(room.pkgH){var rem=room.pkgH*36e5-ms;$('#rrem').textContent=rem>0?'باقي '+fmt(rem)+' من الباقة':'الباقة خلصت، الوقت الزيادة بيتحسب بالساعة'}
+}
+function pollRoom(){if(!DB)return;fetch(DB+'/room.json').then(function(r){return r.json()}).then(function(d){room=d||{on:false};renderRoom()}).catch(function(){})}
+
+function lines(){var o=[];MENU.forEach(function(g,gi){g.i.forEach(function(x,ii){var q=cart[gi+'-'+ii];if(q)o.push({n:x.n,q:q,p:x.p})})});return o}
+function renderMenu(){
+  $('#tabs').innerHTML=MENU.map(function(g,i){return '<button class="'+(i===cat?'on':'')+'" data-c="'+i+'">'+esc(g.c)+'</button>'}).join('');
+  $('#tabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){cat=+b.dataset.c;renderMenu()}});
+  $('#items').innerHTML=MENU[cat].i.map(function(x,ii){var k=cat+'-'+ii,q=cart[k]||0;
+    return '<div class="it"><div><b>'+esc(x.n)+'</b><small>'+x.p+' ج</small></div><div class="qty">'+(q?'<button data-k="'+k+'" data-d="-1" aria-label="أقل">−</button><span>'+q+'</span>':'')+'<button data-k="'+k+'" data-d="1" aria-label="أكتر">+</button></div></div>'}).join('');
+  $('#items').querySelectorAll('button').forEach(function(b){b.onclick=function(){var k=b.dataset.k,q=(cart[k]||0)+ +b.dataset.d;if(q<=0)delete cart[k];else cart[k]=q;renderMenu();renderBar()}});
+}
+function renderBar(){
+  var l=lines(),t=l.reduce(function(a,x){return a+x.q*x.p},0);
+  $('#bar').style.display=l.length?'flex':'none';
+  $('#tot').textContent=t+' ج';
+}
+function waText(o){return 'طلب جديد - VIP Room\n'+o.items.map(function(i){return i.q+'× '+i.n+' — '+i.q*i.p+' ج'}).join('\n')+'\nالإجمالي: '+o.total+' ج'+(o.note?'\nملاحظات: '+o.note:'')}
+function openWA(o){if(WA)window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(waText(o)),'_blank')}
+function showSt(msg,o){
+  var el=$('#st');el.style.display='block';
+  el.innerHTML='<div class="disp" style="font-size:22px;color:var(--beige)">'+msg+'</div>'+(o&&WA?'<p style="margin-top:8px"><a href="#" id="waLnk">ابعت نسخة على واتساب كمان</a></p>':'');
+  if(o&&WA)$('#waLnk').onclick=function(e){e.preventDefault();openWA(o)};
+}
+$('#send').onclick=function(){
+  var items=lines();if(!items.length)return;
+  var o={room:'VIP',items:items,total:items.reduce(function(a,x){return a+x.q*x.p},0),note:$('#note').value.trim(),t:Date.now(),status:'new'};
+  var btn=$('#send');btn.disabled=true;
+  if(!DB){if(WA){openWA(o)}else{alert('الطلب مش متفعّل لسه، كلّم الكاشير')}btn.disabled=false;return}
+  fetch(DB+'/orders.json',{method:'POST',body:JSON.stringify(o)}).then(function(r){return r.json()}).then(function(r){
+    myKey=r.name;cart={};$('#note').value='';renderMenu();renderBar();showSt('طلبك وصل للكاشير',o);
+  }).catch(function(){if(WA){openWA(o)}else{alert('حصلت مشكلة، حاول تاني أو كلّم الكاشير')}}).then(function(){btn.disabled=false});
+};
+function pollSt(){
+  if(!DB||!myKey)return;
+  fetch(DB+'/orders/'+myKey+'.json').then(function(r){return r.json()}).then(function(d){
+    if(!d||d.status===lastStatus)return;lastStatus=d.status;
+    if(d.status==='prep')showSt('طلبك بيتجهز دلوقتي');
+    if(d.status==='done'){showSt('طلبك اتسلّم، بالهنا والشفا');myKey=null}
+  }).catch(function(){});
+}
+renderMenu();renderBar();renderRoom();pollRoom();
+setInterval(tickRoom,1000);setInterval(pollRoom,5000);setInterval(pollSt,4000);
+</script>
+</body>
+</html>
