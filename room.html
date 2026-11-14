@@ -62,8 +62,18 @@ var DB=''; /* بيتوصّل تلقائي بمشروع vip-room-cc751 */
 (function(){var P='vip-room-cc751-default-rtdb',C=['https://'+P+'.europe-west1.firebasedatabase.app','https://'+P+'.firebaseio.com','https://'+P+'.asia-southeast1.firebasedatabase.app'];
 (function f(i){if(i>=C.length)return;fetch(C[i]+'/.json?shallow=true').then(function(r){if(r.ok){DB=C[i];renderRoom();pollRoom();}else f(i+1)},function(){f(i+1)})})(0)})();
 var WA='';  /* رقم واتساب الكاشير بالصيغة الدولية من غير +، مثال 201012345678 */
-var MENU=[  /* غيّر الأصناف والأسعار بالمنيو الحقيقي */
- {c:'تجريبي',i:[{n:'صنف تجريبي 1 (غيّره)',p:10},{n:'صنف تجريبي 2 (غيّره)',p:20},{n:'صنف تجريبي 3 (غيّره)',p:30}]}
+var SM=['صغير','وسط'],MD=['وسط','كبير'],SD=['سينجل','دبل'];
+function o(n,p){return{n:n,p:p}}
+function v(n,L,P){return{n:n,v:L.map(function(l,i){return{l:l,p:P[i]}})}}
+function h(n,a,b){return v(n,SM,[a,b])}
+function c(n,a,b){return v(n,MD,[a,b])}
+var MENU=[
+{c:'مشروبات ساخنة',i:[v('اسبريسو',SD,[50,60]),h('أمريكانو',60,75),h('كابتشينو',80,95),h('لاتيه',75,90),h('سبانش لاتيه',85,100),h('موكا',80,95),h('وايت موكا',80,95),h('فلات وايت',65,80),h('ميكاتو',65,80),h('كورتادو',65,80),o('شاي',15),h('شاي باللبن',35,50),h('نسكافيه باللبن',50,65),v('قهوة تركي',SD,[30,40]),h('قهوة فرنساوي',50,65),o('تفاح بالقرفة',70),h('هوت شوكليت',50,65),h('قهوة بالبندق',60,75),o('شاي كرك',35),h('شاي كرك باللبن',50,65),o('قرفة',20),h('قرفة باللبن',40,55),h('وايت هوت شوكليت',50,65),h('سحلب بالمكسرات',50,70),h('سحلب بيستاشيو',70,90),o('شاي أخضر',20),o('كركديه',20),o('ينسون',20),o('نعناع',20)]},
+{c:'مشروبات باردة',i:[c('لاتيه',85,100),c('موكا',90,105),c('وايت موكا',90,105),c('كابتشينو',90,105),c('أمريكانو',70,85),c('سبانش لاتيه',95,110),c('موهيتو',65,80),c('فرابيه بدون قهوة',60,75),c('فرابيه',80,95),c('شاي مثلج',70,85),o('كورتادو',90),c('سموزي',40,50),c('ميلك شيك',60,75)]},
+{c:'عصائر فريش',i:[o('فراولة باللبن',50),o('جوافة باللبن',50),o('كنتالوب',50),o('ليمون بالنعناع',40),o('تمر باللبن بالعسل',70),o('مانجو',75),o('برتقال',40)]},
+{c:'مشروبات غازية',i:[o('كوكاكولا (أوريجينال - زيرو)',25),o('سبرايت (أوريجينال - زيرو)',25),o('فانتا (تفاح - برتقال)',25),o('شويبس (أناناس - خوخ - رمان - يوسفي - تفاح - ليمون نعناع)',25),o('فيوري',30),o('مونستر (أوريجينال - ألترا - مانجو)',70),o('ريد بل',70),o('باور أيد',50),o('بيبسي (أوريجينال - دايت)',25),v('مياه',['600 مل','1.5 لتر'],[10,15]),o('ستينج',25),o('تويست (أوريجينال - توت - فراولة)',25),o('ماونتن ديو',25),o('في كولا (أوريجينال - دايت)',25),o('سفن أب (أوريجينال - دايت)',25)]},
+{c:'مأكولات',i:[v('بطاطس مقلية',['صغير','وسط','إكسترا لارج'],[40,55,80]),o('سندوتش بطاطس',45),o('برجر 100 جم بالجبنة',105),o('بيف برجر 100 جم - سندوتش',85),o('برجر 250 جم',135),o('برجر 250 جم بالجبنة',155),o('برجر دجاج - سندوتش',65),o('برجر دجاج بالجبنة',85),o('هوت دوج - سندوتش',70),o('هوت دوج مكسيكان - سندوتش',80),o('كفتة سيخ',100),o('سجق بقري',110),o('شيش طاووق - سندوتش',100),o('فيليه مشوي - سندوتش',110),o('مسحب دجاج - سندوتش',130),o('كوردون بلو',150),o('كومبو',50)]},
+{c:'مسليات وأخرى',i:[o('وافل (شوكولاتة - شوكولاتة بيضاء)',75),o('وافل (كيندر - فريرو - لوتس)',85),o('وافل بيستاشيو',100),v('فيشار',['صغير','كبير'],[20,30]),o('إندومي',25),o('حمص الشام',65),o('مناديل جيب',5)]}
 ];
 /* ===== الكود ===== */
 var $=function(s){return document.querySelector(s)};
@@ -86,12 +96,14 @@ function tickRoom(){
 }
 function pollRoom(){if(!DB)return;fetch(DB+'/room.json').then(function(r){return r.json()}).then(function(d){room=d||{on:false};renderRoom()}).catch(function(){})}
 
-function lines(){var o=[];MENU.forEach(function(g,gi){g.i.forEach(function(x,ii){var q=cart[gi+'-'+ii];if(q)o.push({n:x.n,q:q,p:x.p})})});return o}
+function lines(){var o=[];MENU.forEach(function(g,gi){g.i.forEach(function(x,ii){if(x.v){x.v.forEach(function(y,vi){var q=cart[gi+'-'+ii+'-'+vi];if(q)o.push({n:x.n+' ('+y.l+')',q:q,p:y.p})})}else{var q=cart[gi+'-'+ii];if(q)o.push({n:x.n,q:q,p:x.p})}})});return o}
+function ctl(k,q){return '<div class="qty">'+(q?'<button data-k="'+k+'" data-d="-1" aria-label="أقل">−</button><span>'+q+'</span>':'')+'<button data-k="'+k+'" data-d="1" aria-label="أكتر">+</button></div>'}
 function renderMenu(){
   $('#tabs').innerHTML=MENU.map(function(g,i){return '<button class="'+(i===cat?'on':'')+'" data-c="'+i+'">'+esc(g.c)+'</button>'}).join('');
   $('#tabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){cat=+b.dataset.c;renderMenu()}});
-  $('#items').innerHTML=MENU[cat].i.map(function(x,ii){var k=cat+'-'+ii,q=cart[k]||0;
-    return '<div class="it"><div><b>'+esc(x.n)+'</b><small>'+x.p+' ج</small></div><div class="qty">'+(q?'<button data-k="'+k+'" data-d="-1" aria-label="أقل">−</button><span>'+q+'</span>':'')+'<button data-k="'+k+'" data-d="1" aria-label="أكتر">+</button></div></div>'}).join('');
+  $('#items').innerHTML=MENU[cat].i.map(function(x,ii){
+    if(x.v)return '<div class="it" style="display:block"><b>'+esc(x.n)+'</b>'+x.v.map(function(y,vi){var k=cat+'-'+ii+'-'+vi;return '<div class="it" style="padding:8px 0 0;border:0"><small>'+y.l+' · '+y.p+' ج</small>'+ctl(k,cart[k]||0)+'</div>'}).join('')+'</div>';
+    var k=cat+'-'+ii;return '<div class="it"><div><b>'+esc(x.n)+'</b><small>'+x.p+' ج</small></div>'+ctl(k,cart[k]||0)+'</div>'}).join('');
   $('#items').querySelectorAll('button').forEach(function(b){b.onclick=function(){var k=b.dataset.k,q=(cart[k]||0)+ +b.dataset.d;if(q<=0)delete cart[k];else cart[k]=q;renderMenu();renderBar()}});
 }
 function renderBar(){
